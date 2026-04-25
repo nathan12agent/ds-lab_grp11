@@ -1,0 +1,14 @@
+{
+  "trained_at": "2026-04-25T20:39:07.209813",
+  "method": "StackingClassifier",
+  "train_f1": 0.6543,
+  "test_f1": 0.5732,
+  "overfit_gap": 0.0812,
+  "models": [
+    "Logistic Regression",
+    "SVM",
+    "Random Forest",
+    "Gradient Boosting",
+    "XGBoost"
+  ]
+}

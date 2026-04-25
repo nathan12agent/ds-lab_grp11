@@ -1,0 +1,66 @@
+{
+  "Logistic Regression": {
+    "baseline_cv_f1": 0.6417,
+    "random_search_f1": 0.6417,
+    "grid_search_f1": 0.6417,
+    "best_params": {
+      "C": 10.0,
+      "max_iter": 2000,
+      "solver": "lbfgs"
+    }
+  },
+  "SVM": {
+    "baseline_cv_f1": 0.7825,
+    "random_search_f1": 0.8579,
+    "grid_search_f1": 0.8579,
+    "best_params": {
+      "C": 10.0,
+      "gamma": "scale",
+      "kernel": "rbf"
+    }
+  },
+  "Random Forest": {
+    "baseline_cv_f1": 0.8611,
+    "random_search_f1": 0.8611,
+    "grid_search_f1": 0.8852,
+    "best_params": {
+      "max_depth": null,
+      "max_features": "log2",
+      "min_samples_leaf": 1,
+      "n_estimators": 300
+    }
+  },
+  "Gradient Boosting": {
+    "baseline_cv_f1": 0.7796,
+    "random_search_f1": 0.8844,
+    "grid_search_f1": 0.8844,
+    "best_params": {
+      "learning_rate": 0.1,
+      "max_depth": 7,
+      "n_estimators": 300,
+      "subsample": 0.8
+    }
+  },
+  "XGBoost": {
+    "baseline_cv_f1": 0.8561,
+    "random_search_f1": 0.8789,
+    "grid_search_f1": 0.8789,
+    "best_params": {
+      "learning_rate": 0.1,
+      "max_depth": 8,
+      "n_estimators": 200,
+      "subsample": 0.8
+    }
+  },
+  "StackingEnsemble": {
+    "baseline_cv_f1": 0.9047,
+    "random_search_f1": 0.9047,
+    "grid_search_f1": 0.9058,
+    "best_params": {
+      "cv": 3,
+      "final_estimator__learning_rate": 0.1,
+      "final_estimator__max_depth": 2,
+      "final_estimator__n_estimators": 100
+    }
+  }
+}
