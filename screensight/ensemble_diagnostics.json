@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-04-26T15:10:15.313553",
+  "trained_at": "2026-04-26T15:25:00.040379",
   "method": "StackingClassifier",
   "train_f1": 0.6938,
   "test_f1": 0.5772,
