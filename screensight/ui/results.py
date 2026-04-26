@@ -7,14 +7,14 @@ render_step7() - loads ensemble pkl, shows 5-model vote cards,
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
+import pandas as pd
 
 from screensight.constants import SII_LABELS, MODEL_ACCURACY, MODEL_WEIGHTS
 from screensight.ensemble_predict import run_inference, _ensemble
 from screensight.wearable import export_report
 from screensight.ui.navigation import render_progress_bar
 
-# ADD after run_inference call:
-# Load dataset for EDA
+
 @st.cache_data
 def load_dataset():
     try:
@@ -25,16 +25,19 @@ def load_dataset():
         return df
     except Exception:
         return None
-
-df_eda = load_dataset()
-
+def _ordinal(n):
+    n = int(n)
+    if 11 <= (n % 100) <= 13:
+        return "th"
+    return {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    
 def render_step7():
     render_progress_bar(7)
     st.markdown("## Your Assessment Results")
     answers = st.session_state.answers
 
     try:
-       predictions, final_pred, input_df, confidence, conflict = run_inference(answers)
+        predictions, final_pred, input_df, confidence, conflict = run_inference(answers)
     except Exception as e:
         st.error(f"Could not load the ensemble model. Run: python screensight/train_ensemble.py\n\nDetail: {e}")
         st.stop()
@@ -81,7 +84,7 @@ def render_step7():
   <p style="color:#b0bec5;font-size:0.95rem;margin-top:4px;">{sii_desc}</p>
 </div>{count_up_js}""", unsafe_allow_html=True)
 
-# ── Confidence banner ─────────────────────────────────────────────────────
+    # ── Confidence banner ─────────────────────────────────────────────────────
     if conflict:
         st.warning(
             f"⚠️ Models show conflicting signals — prediction confidence is lower. "
@@ -91,7 +94,6 @@ def render_step7():
     else:
         st.success(f"✓ Strong model agreement — confidence: {confidence*100:.0f}%")
 
-    
     # ── 5-model vote cards ────────────────────────────────────────────────────
     st.markdown("### Ensemble Model Predictions")
     st.caption("Stacking ensemble of 5 classifiers: ET · SVM · RF · GB · XGB. Final prediction determined by tuned XGBoost meta-learner.")
@@ -133,7 +135,8 @@ def render_step7():
         score = max(0.0, min(1.0, (float(val)-lo)/(hi-lo))) if hi != lo else 0.0
         risk_scores.append(round(score*100, 1))
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Breakdown", "Radar Profile", "Model Confidence", "Improvement Areas", "Dataset EDA"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Breakdown", "Radar Profile", "Model Confidence", "Improvement Areas", "📊 Dataset EDA"])
+
     with tab1:
         st.caption("How each area contributes to the overall risk score.")
         fig1, ax1 = plt.subplots(figsize=(8, 4))
@@ -215,129 +218,164 @@ def render_step7():
   <div style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700;color:#e8eaf6;margin-bottom:6px;">{title}</div>
   <div style="color:#b0bec5;font-size:0.9rem;line-height:1.55;">{text}</div></div>""", unsafe_allow_html=True)
 
+    with tab5:
+        df_eda = load_dataset()
+        if df_eda is None:
+            st.warning("Dataset not found. Make sure clean_train_final1 (1).csv is in the project root.")
+        else:
+            st.caption("How your profile compares to the full dataset used to train the model.")
 
-with tab5:
-    if df_eda is None:
-        st.warning("Dataset not found. Make sure clean_train_final1 (1).csv is in the project root.")
-    else:
-        st.caption("How your profile compares to the full dataset used to train the model.")
-
-        # ── Row 1: SII Distribution ───────────────────────────────────────
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("**SII Class Distribution**")
-            fig, ax = plt.subplots(figsize=(4, 3))
-            fig.patch.set_facecolor("#0d1226")
-            ax.set_facecolor("#0d1226")
-            sii_counts = df_eda["sii"].value_counts().sort_index()
             sii_names  = {0: "None", 1: "Mild", 2: "Moderate"}
-            sii_colors = ["#00e5a0", "#5c6fff", "#ffb547"]
-            bars = ax.bar(
-                [sii_names.get(i, str(i)) for i in sii_counts.index],
-                sii_counts.values,
-                color=sii_colors[:len(sii_counts)],
-                edgecolor="none",
-                width=0.5,
-            )
-            # Highlight user's class
-            user_sii_name = sii_names.get(final_pred, str(final_pred))
-            for bar, label in zip(bars, [sii_names.get(i, str(i)) for i in sii_counts.index]):
-                if label == user_sii_name:
-                    bar.set_edgecolor("#ffffff")
-                    bar.set_linewidth(2)
-                    ax.text(
-                        bar.get_x() + bar.get_width()/2,
-                        bar.get_height() + 10,
-                        "← You",
-                        ha="center", color="#ffffff",
-                        fontsize=8, fontweight="bold"
-                    )
-            ax.set_ylabel("Count", color="#8892b0", fontsize=8)
-            ax.tick_params(colors="#c5cae9", labelsize=8)
-            for spine in ax.spines.values():
-                spine.set_visible(False)
-            ax.yaxis.grid(True, color=(1,1,1,0.06))
-            ax.set_axisbelow(True)
-            fig.tight_layout(pad=1.2)
-            st.pyplot(fig)
-            plt.close(fig)
-
-        with col2:
-            st.markdown("**Age Distribution**")
-            fig, ax = plt.subplots(figsize=(4, 3))
-            fig.patch.set_facecolor("#0d1226")
-            ax.set_facecolor("#0d1226")
-            ax.hist(
-                df_eda["Basic_Demos-Age"].dropna(),
-                bins=20, color="#5c6fff",
-                edgecolor="none", alpha=0.8
-            )
-            user_age = float(answers.get("Basic_Demos-Age", 0))
-            ax.axvline(user_age, color="#ffffff", linewidth=2, linestyle="--")
-            ax.text(
-                user_age + 0.3, ax.get_ylim()[1] * 0.85,
-                "You", color="#ffffff", fontsize=8, fontweight="bold"
-            )
-            ax.set_xlabel("Age", color="#8892b0", fontsize=8)
-            ax.set_ylabel("Count", color="#8892b0", fontsize=8)
-            ax.tick_params(colors="#c5cae9", labelsize=8)
-            for spine in ax.spines.values():
-                spine.set_visible(False)
-            ax.yaxis.grid(True, color=(1,1,1,0.06))
-            ax.set_axisbelow(True)
-            fig.tight_layout(pad=1.2)
-            st.pyplot(fig)
-            plt.close(fig)
-
-        # ── Row 2: Screen Time + BMI ──────────────────────────────────────
-        col3, col4 = st.columns(2)
-
-        with col3:
-            st.markdown("**Screen Time Distribution**")
-            fig, ax = plt.subplots(figsize=(4, 3))
-            fig.patch.set_facecolor("#0d1226")
-            ax.set_facecolor("#0d1226")
-            ax.hist(
-                df_eda["PreInt_EduHx-computerinternet_hoursday"].dropna(),
-                bins=15, color="#ffb547",
-                edgecolor="none", alpha=0.8
-            )
+            user_age    = float(answers.get("Basic_Demos-Age", 0))
             user_screen = float(answers.get("PreInt_EduHx-computerinternet_hoursday", 0))
-            ax.axvline(user_screen, color="#ffffff", linewidth=2, linestyle="--")
-            ax.text(
-                user_screen + 0.1, ax.get_ylim()[1] * 0.85,
-                "You", color="#ffffff", fontsize=8, fontweight="bold"
-            )
-            ax.set_xlabel("Hours/day", color="#8892b0", fontsize=8)
-            ax.set_ylabel("Count", color="#8892b0", fontsize=8)
-            ax.tick_params(colors="#c5cae9", labelsize=8)
-            for spine in ax.spines.values():
-                spine.set_visible(False)
-            ax.yaxis.grid(True, color=(1,1,1,0.06))
-            ax.set_axisbelow(True)
-            fig.tight_layout(pad=1.2)
-            st.pyplot(fig)
-            plt.close(fig)
+            user_bmi    = float(answers.get("Physical-BMI", 0))
 
-        with col4:
-            st.markdown("**BMI Distribution**")
-            fig, ax = plt.subplots(figsize=(4, 3))
+            # ── Row 1: SII Distribution + Age ────────────────────────────────
+            eda_col1, eda_col2 = st.columns(2)
+
+            with eda_col1:
+                st.markdown("**SII Class Distribution**")
+                fig, ax = plt.subplots(figsize=(4, 3))
+                fig.patch.set_facecolor("#0d1226")
+                ax.set_facecolor("#0d1226")
+                sii_counts = df_eda["sii"].value_counts().sort_index()
+                sii_colors = ["#00e5a0", "#5c6fff", "#ffb547"]
+                bars = ax.bar(
+                    [sii_names.get(i, str(i)) for i in sii_counts.index],
+                    sii_counts.values,
+                    color=sii_colors[:len(sii_counts)],
+                    edgecolor="none",
+                    width=0.5,
+                )
+                user_sii_name = sii_names.get(final_pred, str(final_pred))
+                for bar, label in zip(bars, [sii_names.get(i, str(i)) for i in sii_counts.index]):
+                    if label == user_sii_name:
+                        bar.set_edgecolor("#ffffff")
+                        bar.set_linewidth(2)
+                        ax.text(
+                            bar.get_x() + bar.get_width()/2,
+                            bar.get_height() + 10,
+                            "← You",
+                            ha="center", color="#ffffff",
+                            fontsize=8, fontweight="bold"
+                        )
+                ax.set_ylabel("Count", color="#8892b0", fontsize=8)
+                ax.tick_params(colors="#c5cae9", labelsize=8)
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.yaxis.grid(True, color=(1,1,1,0.06))
+                ax.set_axisbelow(True)
+                fig.tight_layout(pad=1.2)
+                st.pyplot(fig)
+                plt.close(fig)
+
+            with eda_col2:
+                st.markdown("**Age Distribution**")
+                fig, ax = plt.subplots(figsize=(4, 3))
+                fig.patch.set_facecolor("#0d1226")
+                ax.set_facecolor("#0d1226")
+                ax.hist(
+                    df_eda["Basic_Demos-Age"].dropna(),
+                    bins=20, color="#5c6fff",
+                    edgecolor="none", alpha=0.8
+                )
+                ax.axvline(user_age, color="#ffffff", linewidth=2, linestyle="--")
+                ax.text(
+                    user_age + 0.3, ax.get_ylim()[1] * 0.85,
+                    "You", color="#ffffff", fontsize=8, fontweight="bold"
+                )
+                ax.set_xlabel("Age", color="#8892b0", fontsize=8)
+                ax.set_ylabel("Count", color="#8892b0", fontsize=8)
+                ax.tick_params(colors="#c5cae9", labelsize=8)
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.yaxis.grid(True, color=(1,1,1,0.06))
+                ax.set_axisbelow(True)
+                fig.tight_layout(pad=1.2)
+                st.pyplot(fig)
+                plt.close(fig)
+
+            # ── Row 2: Screen Time + BMI ──────────────────────────────────────
+            eda_col3, eda_col4 = st.columns(2)
+
+            with eda_col3:
+                st.markdown("**Screen Time Distribution**")
+                fig, ax = plt.subplots(figsize=(4, 3))
+                fig.patch.set_facecolor("#0d1226")
+                ax.set_facecolor("#0d1226")
+                ax.hist(
+                    df_eda["PreInt_EduHx-computerinternet_hoursday"].dropna(),
+                    bins=15, color="#ffb547",
+                    edgecolor="none", alpha=0.8
+                )
+                ax.axvline(user_screen, color="#ffffff", linewidth=2, linestyle="--")
+                ax.text(
+                    user_screen + 0.1, ax.get_ylim()[1] * 0.85,
+                    "You", color="#ffffff", fontsize=8, fontweight="bold"
+                )
+                ax.set_xlabel("Hours/day", color="#8892b0", fontsize=8)
+                ax.set_ylabel("Count", color="#8892b0", fontsize=8)
+                ax.tick_params(colors="#c5cae9", labelsize=8)
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.yaxis.grid(True, color=(1,1,1,0.06))
+                ax.set_axisbelow(True)
+                fig.tight_layout(pad=1.2)
+                st.pyplot(fig)
+                plt.close(fig)
+
+            with eda_col4:
+                st.markdown("**BMI Distribution**")
+                fig, ax = plt.subplots(figsize=(4, 3))
+                fig.patch.set_facecolor("#0d1226")
+                ax.set_facecolor("#0d1226")
+                ax.hist(
+                    df_eda["Physical-BMI"].dropna(),
+                    bins=20, color="#00e5a0",
+                    edgecolor="none", alpha=0.8
+                )
+                ax.axvline(user_bmi, color="#ffffff", linewidth=2, linestyle="--")
+                ax.text(
+                    user_bmi + 0.2, ax.get_ylim()[1] * 0.85,
+                    "You", color="#ffffff", fontsize=8, fontweight="bold"
+                )
+                ax.set_xlabel("BMI", color="#8892b0", fontsize=8)
+                ax.set_ylabel("Count", color="#8892b0", fontsize=8)
+                ax.tick_params(colors="#c5cae9", labelsize=8)
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.yaxis.grid(True, color=(1,1,1,0.06))
+                ax.set_axisbelow(True)
+                fig.tight_layout(pad=1.2)
+                st.pyplot(fig)
+                plt.close(fig)
+
+            # ── Row 3: Screen Time boxplot by SII class ───────────────────────
+            st.markdown("**Screen Time by SII Class** — where does your screen time fall?")
+            fig, ax = plt.subplots(figsize=(8, 3))
             fig.patch.set_facecolor("#0d1226")
             ax.set_facecolor("#0d1226")
-            ax.hist(
-                df_eda["Physical-BMI"].dropna(),
-                bins=20, color="#00e5a0",
-                edgecolor="none", alpha=0.8
+            sii_groups = [
+                df_eda[df_eda["sii"] == i]["PreInt_EduHx-computerinternet_hoursday"].dropna().values
+                for i in sorted(df_eda["sii"].unique())
+            ]
+            sii_labels_box = [sii_names.get(i, str(i)) for i in sorted(df_eda["sii"].unique())]
+            bp = ax.boxplot(
+                sii_groups,
+                labels=sii_labels_box,
+                patch_artist=True,
+                medianprops=dict(color="white", linewidth=2),
+                whiskerprops=dict(color="#8892b0"),
+                capprops=dict(color="#8892b0"),
+                flierprops=dict(marker="o", color="#8892b0", markersize=3),
             )
-            user_bmi = float(answers.get("Physical-BMI", 0))
-            ax.axvline(user_bmi, color="#ffffff", linewidth=2, linestyle="--")
-            ax.text(
-                user_bmi + 0.2, ax.get_ylim()[1] * 0.85,
-                "You", color="#ffffff", fontsize=8, fontweight="bold"
-            )
-            ax.set_xlabel("BMI", color="#8892b0", fontsize=8)
-            ax.set_ylabel("Count", color="#8892b0", fontsize=8)
+            box_colors = ["#00e5a0", "#5c6fff", "#ffb547"]
+            for patch, color in zip(bp["boxes"], box_colors):
+                patch.set_facecolor(color)
+                patch.set_alpha(0.6)
+            ax.axhline(user_screen, color="#ffffff", linewidth=1.5, linestyle="--", alpha=0.8)
+            ax.text(0.5, user_screen + 0.1, f"Your screen time: {user_screen:.0f}h", color="#ffffff", fontsize=8)
+            ax.set_ylabel("Hours/day", color="#8892b0", fontsize=8)
             ax.tick_params(colors="#c5cae9", labelsize=8)
             for spine in ax.spines.values():
                 spine.set_visible(False)
@@ -347,72 +385,30 @@ with tab5:
             st.pyplot(fig)
             plt.close(fig)
 
-        # ── Row 3: SII by Screen Time boxplot ─────────────────────────────
-        st.markdown("**Screen Time by SII Class** — where does your screen time fall?")
-        fig, ax = plt.subplots(figsize=(8, 3))
-        fig.patch.set_facecolor("#0d1226")
-        ax.set_facecolor("#0d1226")
-        sii_groups = [
-            df_eda[df_eda["sii"] == i]["PreInt_EduHx-computerinternet_hoursday"].dropna().values
-            for i in sorted(df_eda["sii"].unique())
-        ]
-        sii_labels_box = [sii_names.get(i, str(i)) for i in sorted(df_eda["sii"].unique())]
-        bp = ax.boxplot(
-            sii_groups,
-            labels=sii_labels_box,
-            patch_artist=True,
-            medianprops=dict(color="white", linewidth=2),
-            whiskerprops=dict(color="#8892b0"),
-            capprops=dict(color="#8892b0"),
-            flierprops=dict(marker="o", color="#8892b0", markersize=3),
-        )
-        box_colors = ["#00e5a0", "#5c6fff", "#ffb547"]
-        for patch, color in zip(bp["boxes"], box_colors):
-            patch.set_facecolor(color)
-            patch.set_alpha(0.6)
-        # Mark user's screen time
-        ax.axhline(
-            user_screen, color="#ffffff",
-            linewidth=1.5, linestyle="--", alpha=0.8
-        )
-        ax.text(
-            0.5, user_screen + 0.1,
-            f"Your screen time: {user_screen:.0f}h",
-            color="#ffffff", fontsize=8
-        )
-        ax.set_ylabel("Hours/day", color="#8892b0", fontsize=8)
-        ax.tick_params(colors="#c5cae9", labelsize=8)
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        ax.yaxis.grid(True, color=(1,1,1,0.06))
-        ax.set_axisbelow(True)
-        fig.tight_layout(pad=1.2)
-        st.pyplot(fig)
-        plt.close(fig)
-
-        # ── Row 4: Percentile summary ──────────────────────────────────────
-        st.markdown("**Your Percentile Rankings**")
-        percentile_data = {
-            "Screen Time":    ("PreInt_EduHx-computerinternet_hoursday", user_screen),
-            "BMI":            ("Physical-BMI", user_bmi),
-            "Age":            ("Basic_Demos-Age", user_age),
-            "Sleep Score":    ("SDS-SDS_Total_Raw", float(answers.get("SDS-SDS_Total_Raw", 35))),
-            "Activity Score": ("PAQ_C-PAQ_C_Total", float(answers.get("PAQ_C-PAQ_C_Total", 2.5))),
-        }
-        pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
-        pcols = [pcol1, pcol2, pcol3, pcol4, pcol5]
-        for col, (label, (feat, val)) in zip(pcols, percentile_data.items()):
-            if feat in df_eda.columns:
-                pct = float((df_eda[feat].dropna() <= val).mean() * 100)
-                color = "#ff4d6d" if pct > 75 else "#ffb547" if pct > 50 else "#00e5a0"
-                with col:
-                    st.markdown(f"""
+            # ── Row 4: Percentile summary ──────────────────────────────────────
+            st.markdown("**Your Percentile Rankings**")
+            percentile_data = {
+                "Screen Time":    ("PreInt_EduHx-computerinternet_hoursday", user_screen),
+                "BMI":            ("Physical-BMI", user_bmi),
+                "Age":            ("Basic_Demos-Age", user_age),
+                "Sleep Score":    ("SDS-SDS_Total_Raw", float(answers.get("SDS-SDS_Total_Raw", 35))),
+                "Activity Score": ("PAQ_C-PAQ_C_Total", float(answers.get("PAQ_C-PAQ_C_Total", 2.5))),
+            }
+            eda_pcol1, eda_pcol2, eda_pcol3, eda_pcol4, eda_pcol5 = st.columns(5)
+            pcols = [eda_pcol1, eda_pcol2, eda_pcol3, eda_pcol4, eda_pcol5]
+            for col, (label, (feat, val)) in zip(pcols, percentile_data.items()):
+                if feat in df_eda.columns:
+                    pct = float((df_eda[feat].dropna() <= val).mean() * 100)
+                    color = "#ff4d6d" if pct > 75 else "#ffb547" if pct > 50 else "#00e5a0"
+                    with col:
+                        st.markdown(f"""
 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
             border-radius:12px;padding:12px 8px;text-align:center;">
   <div style="font-size:0.65rem;color:#8892b0;margin-bottom:4px;">{label}</div>
-  <div style="font-family:Syne,sans-serif;font-size:1.4rem;font-weight:800;color:{color};">{pct:.0f}th</div>
+  <div style="font-family:Syne,sans-serif;font-size:1.4rem;font-weight:800;color:{color};">{pct:.0f}{_ordinal(pct)}</div>
   <div style="font-size:0.6rem;color:#4a5568;">percentile</div>
 </div>""", unsafe_allow_html=True)
+
     with st.expander("What does SII mean?"):
         st.markdown("""**SII (Severity Index)** is a 0-3 scale:
 | Score | Label | Meaning |
@@ -422,7 +418,7 @@ with tab5:
 | 2 | Moderate | Consider professional guidance |
 | 3 | Severe | Professional support strongly recommended |
 
-Produced by a stacking ensemble of 5 classifiers (ET, SVM, RF, GB, XGB) with a tuned XGBoost meta-learner **Not a clinical diagnosis.**""")
+Produced by a stacking ensemble of 5 classifiers (ET, SVM, RF, GB, XGB) with a tuned XGBoost meta-learner. **Not a clinical diagnosis.**""")
 
     report_html = export_report(answers, final_pred, predictions)
     st.download_button(label="Download Report", data=report_html.encode("utf-8"),
