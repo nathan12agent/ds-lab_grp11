@@ -30,7 +30,7 @@ def _ordinal(n):
     if 11 <= (n % 100) <= 13:
         return "th"
     return {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    
+
 def render_step7():
     render_progress_bar(7)
     st.markdown("## Your Assessment Results")
@@ -135,7 +135,7 @@ def render_step7():
         score = max(0.0, min(1.0, (float(val)-lo)/(hi-lo))) if hi != lo else 0.0
         risk_scores.append(round(score*100, 1))
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Breakdown", "Radar Profile", "Model Confidence", "Improvement Areas", "📊 Dataset EDA"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Breakdown", "Radar Profile", "Model Confidence", "Improvement Areas", "Dataset EDA"])
 
     with tab1:
         st.caption("How each area contributes to the overall risk score.")
