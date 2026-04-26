@@ -74,7 +74,7 @@ _meta_xgb_params = {
 #    Each wrapped in ImbPipeline so SMOTE only
 #    sees training folds — no leakage
 # ─────────────────────────────────────────────
-NEEDS_SCALING = {"Logistic Regression", "SVM"}
+NEEDS_SCALING = { "SVM"}
 
 # REMOVE the _OVERRIDES block entirely
 
