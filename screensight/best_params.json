@@ -1,12 +1,13 @@
 {
-  "Logistic Regression": {
-    "baseline_cv_f1": 0.6417,
-    "random_search_f1": 0.6417,
-    "grid_search_f1": 0.6417,
+  "Extra Trees": {
+    "baseline_cv_f1": 0.8973,
+    "random_search_f1": 0.8691,
+    "grid_search_f1": 0.9009,
     "best_params": {
-      "C": 10.0,
-      "max_iter": 2000,
-      "solver": "lbfgs"
+      "max_depth": null,
+      "max_features": "log2",
+      "min_samples_leaf": 1,
+      "n_estimators": 300
     }
   },
   "SVM": {
@@ -53,9 +54,9 @@
     }
   },
   "StackingEnsemble": {
-    "baseline_cv_f1": 0.9047,
-    "random_search_f1": 0.9047,
-    "grid_search_f1": 0.9058,
+    "baseline_cv_f1": 0.9139,
+    "random_search_f1": 0.9139,
+    "grid_search_f1": 0.9144,
     "best_params": {
       "cv": 3,
       "final_estimator__learning_rate": 0.1,

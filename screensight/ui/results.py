@@ -80,7 +80,7 @@ def render_step7():
     
     # ── 5-model vote cards ────────────────────────────────────────────────────
     st.markdown("### Ensemble Model Predictions")
-    st.caption("Stacking ensemble of 5 classifiers: LR · SVM · RF · GB · XGB. Final prediction determined by tuned XGBoost meta-learner.")
+    st.caption("Stacking ensemble of 5 classifiers: ET · SVM · RF · GB · XGB. Final prediction determined by tuned XGBoost meta-learner.")
 
     model_cols = st.columns(5)
     for i, (name, pred) in enumerate(predictions.items()):
@@ -211,7 +211,7 @@ def render_step7():
 | 2 | Moderate | Consider professional guidance |
 | 3 | Severe | Professional support strongly recommended |
 
-Produced by a stacking ensemble of 5 classifiers (LR, SVM, RF, GB, XGB) with a tuned XGBoost meta-learner **Not a clinical diagnosis.**""")
+Produced by a stacking ensemble of 5 classifiers (ET, SVM, RF, GB, XGB) with a tuned XGBoost meta-learner **Not a clinical diagnosis.**""")
 
     report_html = export_report(answers, final_pred, predictions)
     st.download_button(label="Download Report", data=report_html.encode("utf-8"),

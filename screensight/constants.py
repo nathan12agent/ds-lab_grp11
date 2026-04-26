@@ -67,35 +67,23 @@ SII_LABELS = {
 import os, json
 
 def _load_model_accuracy():
-    diag_path = os.path.join(os.path.dirname(__file__), "ensemble_diagnostics.json")
     try:
-        with open(diag_path) as f:
-            diag = json.load(f)
-        # Use per-model CV scores from best_params.json if available
         best_path = os.path.join(os.path.dirname(__file__), "best_params.json")
         with open(best_path) as f:
             best = json.load(f)
         return {
-            "Logistic Regression": f"{best['Logistic Regression']['grid_search_f1']*100:.1f}%",
-            "SVM":                 f"{best['SVM']['grid_search_f1']*100:.1f}%",
-            "Random Forest":       f"{best['Random Forest']['grid_search_f1']*100:.1f}%",
-            "Gradient Boosting":   f"{best['Gradient Boosting']['grid_search_f1']*100:.1f}%",
-            "XGBoost":             f"{best['XGBoost']['grid_search_f1']*100:.1f}%",
+            name: f"{data['grid_search_f1']*100:.1f}%"
+            for name, data in best.items()
+            if "grid_search_f1" in data  # skips StackingEnsemble entry
         }
     except Exception:
-        return {
-            "Logistic Regression": "N/A",
-            "SVM":                 "N/A",
-            "Random Forest":       "N/A",
-            "Gradient Boosting":   "N/A",
-            "XGBoost":             "N/A",
-        }
-
+        return {}
+  
 MODEL_ACCURACY = _load_model_accuracy()
 MODEL_WEIGHTS = {
-    "Logistic Regression": 0.64,
-    "SVM":                 0.86,
-    "Random Forest":       0.89,
-    "Gradient Boosting":   0.88,
-    "XGBoost":             0.88,
+    "Extra Trees":       0.90,   # highest individual F1
+    "SVM":               0.86,
+    "Random Forest":     0.89,
+    "Gradient Boosting": 0.88,
+    "XGBoost":           0.88,
 }

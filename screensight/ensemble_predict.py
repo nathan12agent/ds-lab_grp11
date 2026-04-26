@@ -66,7 +66,7 @@ def run_inference(answers: dict):
         predictions[name] = pred
 
     # Check if strong models conflict
-    STRONG_MODELS = {"SVM", "Random Forest", "Gradient Boosting", "XGBoost"}
+    STRONG_MODELS = {"Extra Trees", "SVM", "Random Forest", "Gradient Boosting", "XGBoost"}
     strong_preds  = {k: v for k, v in predictions.items() if k in STRONG_MODELS}
     unique_strong = set(strong_preds.values())
     conflict      = len(unique_strong) > 1

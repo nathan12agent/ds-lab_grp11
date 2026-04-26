@@ -1,11 +1,11 @@
 {
-  "trained_at": "2026-04-25T20:39:07.209813",
+  "trained_at": "2026-04-26T15:10:15.313553",
   "method": "StackingClassifier",
-  "train_f1": 0.6543,
-  "test_f1": 0.5732,
-  "overfit_gap": 0.0812,
+  "train_f1": 0.6938,
+  "test_f1": 0.5772,
+  "overfit_gap": 0.1166,
   "models": [
-    "Logistic Regression",
+    "Extra Trees",
     "SVM",
     "Random Forest",
     "Gradient Boosting",
